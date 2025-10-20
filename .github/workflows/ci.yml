@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+      - name: Run tests
+        run: |
+          pytest
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  sonar:
+    needs: test
+    runs-on: ubuntu-latest
+    if: ${{ vars.SONAR_TOKEN != '' && vars.SONAR_HOST_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+      - name: Run tests with coverage
+        run: pytest
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+      - name: SonarQube Scan
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN || vars.SONAR_TOKEN }}
+        run: |
+          pip install sonar-scanner-cli
+          sonar-scanner \
+            -Dsonar.projectKey=flask-crud-demo \
+            -Dsonar.sources=app \
+            -Dsonar.tests=tests \
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+
