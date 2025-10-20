@@ -1,0 +1,43 @@
+name: SonarQube (stage)
+
+on:
+  push:
+    branches: [ "stage" ]
+  pull_request:
+    branches: [ "stage" ]  # PRs cuyo base es stage (validación previa al merge)
+
+jobs:
+  sonarqube:
+    # Ejecuta en push a stage, o en PR dev->stage
+    if: >
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' &&
+       github.base_ref == 'stage' &&
+       github.head_ref == 'dev')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # recomendado para un análisis correcto
+
+      # --- Paso de análisis con el action oficial ---
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          # Para SonarQube Server (self-hosted); para Cloud no es necesario:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      # --- Falla el job si el Quality Gate está en rojo ---
+      - name: SonarQube Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        with:
+          pollingTimeoutSec: 600
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          # Opcional para Server:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
