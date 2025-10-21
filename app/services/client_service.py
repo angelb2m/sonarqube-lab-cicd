@@ -95,6 +95,17 @@ class ClientService:
             raise ValidationError("Email already exists.", field="email") from exc
         return client
 
+
+    def create_client2(self, data: dict[str, Any]) -> Client:
+        client = Client(**data)
+        self.session.add(client)
+        try:
+            self.session.commit()
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise ValidationError("Email already exists.", field="email") from exc
+        return client
+
     def get_client(self, client_id: int) -> Client:
         client = self.session.get(Client, client_id)
         if client is None:
