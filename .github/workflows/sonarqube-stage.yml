@@ -1,93 +1,43 @@
-name: CI & SonarQube
+name: SonarQube (stage)
 
 on:
   push:
-    branches: ["main", "master", "stage"]
+    branches: [ "stage" ]
   pull_request:
-    branches: ["main", "master", "stage"]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [ "stage" ]  # PRs cuyo base es stage (validación previa al merge)
 
 jobs:
-  test:
-    name: Unit tests & coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          # Si usas extras "dev" en setup.cfg/pyproject.toml, mantenlo;
-          # si usas requirements*.txt, cámbialo por el correspondiente.
-          pip install -e .[dev]
-          pip install pytest pytest-cov
-
-      - name: Run tests (with coverage)
-        run: |
-          pytest -q --maxfail=1 --disable-warnings             --cov=app --cov-report=xml:coverage.xml --cov-report=term
-
-      - name: Upload coverage artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage.xml
-          if-no-files-found: warn
-
   sonarqube:
-    name: SonarQube Scan (stage)
-    needs: test
+    # Ejecuta en push a stage, o en PR dev->stage
+    if: >
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' &&
+       github.base_ref == 'stage' &&
+       github.head_ref == 'dev')
     runs-on: ubuntu-latest
-    # Ejecuta en push a 'stage' o PRs cuyo base sea 'stage'
-    if: |
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/stage')) ||
-      (github.event_name == 'pull_request' && github.base_ref == 'stage')
+    permissions:
+      contents: read
+      pull-requests: read
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          fetch-depth: 0  # recomendado para un análisis correcto
 
-      - name: Download coverage artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-report
-          path: .
-
-      - name: Install SonarScanner CLI
-        run: |
-          python -m pip install --upgrade pip
-          pip install sonar-scanner-cli
-
+      # --- Paso de análisis con el action oficial ---
       - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
-          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || secrets.SONAR_HOST_URL }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN || vars.SONAR_TOKEN }}
-        run: |
-          sonar-scanner             -Dsonar.projectKey=flask-crud-demo             -Dsonar.sources=app             -Dsonar.tests=tests             -Dsonar.python.coverage.reportPaths=coverage.xml
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          # Para SonarQube Server (self-hosted); para Cloud no es necesario:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
+      # --- Falla el job si el Quality Gate está en rojo ---
       - name: SonarQube Quality Gate
         uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
         with:
           pollingTimeoutSec: 600
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN || vars.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          # Opcional para Server:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
