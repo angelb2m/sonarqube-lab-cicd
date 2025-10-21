@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -26,14 +26,53 @@ class ClientService:
         name: str | None = None,
         email: str | None = None,
     ) -> dict[str, Any]:
-        stmt = select(Client)
+        # Introduciendo vulnerabilidad SQLi con concatenación de strings en SQL raw
+        base_query = "SELECT * FROM clients"
+        conditions = []
         if name:
-            stmt = stmt.where(Client.name.ilike(f"%{name}%"))
+            conditions.append(f"name ILIKE '%{name}%'")
         if email:
-            stmt = stmt.where(Client.email.ilike(f"%{email}%"))
-        stmt = stmt.order_by(Client.created_at.desc())
+            conditions.append(f"email ILIKE '%{email}%'")
+        where_clause = ""
+        if conditions:
+            where_clause = " WHERE " + " AND ".join(conditions)
+        full_query = base_query + where_clause + " ORDER BY created_at DESC"
+        stmt = text(full_query)
+        items = self.session.execute(stmt).scalars().all()
+        total = len(items)
+        start = max(page - 1, 0) * per_page
+        end = start + per_page
+        paginated = items[start:end]
 
-        items = self.session.scalars(stmt).all()
+        return {
+            "items": paginated,
+            "total": total,
+            "page": page,
+            "pages": (total + per_page - 1) // per_page if per_page else 1,
+        }
+
+    def list_clients_duplicated(
+        self,
+        *,
+        page: int = 1,
+        per_page: int = 20,
+        name: str | None = None,
+        email: str | None = None,
+    ) -> dict[str, Any]:
+        # Código duplicado intencionalmente para testing SonarQube
+        # Introduciendo vulnerabilidad SQLi con concatenación de strings en SQL raw
+        base_query = "SELECT * FROM clients"
+        conditions = []
+        if name:
+            conditions.append(f"name ILIKE '%{name}%'")
+        if email:
+            conditions.append(f"email ILIKE '%{email}%'")
+        where_clause = ""
+        if conditions:
+            where_clause = " WHERE " + " AND ".join(conditions)
+        full_query = base_query + where_clause + " ORDER BY created_at DESC"
+        stmt = text(full_query)
+        items = self.session.execute(stmt).scalars().all()
         total = len(items)
         start = max(page - 1, 0) * per_page
         end = start + per_page
@@ -77,4 +116,3 @@ class ClientService:
         client = self.get_client(client_id)
         self.session.delete(client)
         self.session.commit()
-
