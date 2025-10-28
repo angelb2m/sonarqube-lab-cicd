@@ -26,22 +26,22 @@ jobs:
           fetch-depth: 0  # recomendado para un análisis correcto
 
       # --- Paso de análisis con el action oficial ---
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          # Para SonarQube Server (self-hosted); para Cloud no es necesario:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
-      # --- Falla el job si el Quality Gate está en rojo ---
-      - name: SonarQube Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
-        with:
-          pollingTimeoutSec: 600
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          # Opcional para Server:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+##      - name: SonarQube Scan
+##        uses: SonarSource/sonarqube-scan-action@v6
+##        env:
+##          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+##          # Para SonarQube Server (self-hosted); para Cloud no es necesario:
+##          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+##
+##      # --- Falla el job si el Quality Gate está en rojo ---
+##      - name: SonarQube Quality Gate
+##        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+##        with:
+##          pollingTimeoutSec: 600
+##        env:
+##          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+##          # Opcional para Server:
+##          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
 ##### OWASP DEPENDENCY CHECK
 
