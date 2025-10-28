@@ -67,7 +67,7 @@ jobs:
             ${{ runner.os }}-dc-
 
       - name: Run OWASP Dependency-Check
-        uses: dependency-check/dependency-check-action@v4
+        uses: dependency-check/Dependency-Check_Action@main
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}  # opcional
         with:
