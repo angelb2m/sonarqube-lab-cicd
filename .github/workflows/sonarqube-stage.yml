@@ -53,8 +53,9 @@ jobs:
 
       - name: Generate requirements.txt from pyproject
         run: |
-          python -m pip install --upgrade pip
-          pip install pip-tools
+          # Fijar versiones compatibles para evitar el TypeError de pip-tools con pip reciente
+          python -m pip install --upgrade "pip==24.3.1"
+          python -m pip install "pip-tools==7.4.1"
           pip-compile pyproject.toml -o requirements.txt --resolver=backtracking
 
       # Cache de la base de datos NVD de Dependency-Check
