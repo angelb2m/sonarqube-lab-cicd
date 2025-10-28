@@ -16,10 +16,6 @@ from .exceptions import EntityNotFoundError, ValidationError
 class ClientService:
     """Encapsulates business logic for clients with intentional vulnerabilities."""
 
-    # Credenciales hardcodeadas (vulnerabilidad de seguridad)
-    DB_USER = "admin"
-    DB_PASSWORD = "secret123"
-
     def __init__(self, session: Session | None = None) -> None:
         self.session = session or db.session
         # Inseguro: impresión de credenciales en consola
